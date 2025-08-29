@@ -1,27 +1,24 @@
 
-# Business Problem → Solution Race (Explicit Scoring)
+# Business Problem → Solution Race (v3: 3 Rounds, Auto-Scenario)
 
-This v2 version removes fuzzy keyword scoring. Students answer using radios/multiselects with a fixed answer key. Scores are deterministic.
+- Round determines the scenario (no scenario dropdown).
+- Each round shows a scenario *title* and *description*.
+- Explicit, rule-based scoring (no fuzzy matching).
 
 ## Files
-- `app_v2.py` — Streamlit app
-- `prompts_explicit.json` — scenarios, options, and answer keys
-- `requirements.txt` — minimal deps
+- `app_v3.py` — Streamlit app with round→scenario mapping
+- `prompts_rounds.json` — round metadata + scenarios + answer keys
+- `requirements.txt`
 
-## Run locally
+## Run
 ```bash
 pip install -r requirements.txt
-streamlit run app_v2.py
+streamlit run app_v3.py
 ```
 
 ## Deploy
-- Push these three files to your repo (or a subfolder and point Streamlit to `app_v2.py`).
-- Optional: create `runtime.txt` with `3.11` to pin Python.
+On Streamlit Cloud, set **Main file path** to `app_v3.py`. (Optional: add `runtime.txt` with `3.11`.)
 
-## Scoring
-- Problem (single choice): 2 points
-- Goals (multi-select): up to 3 points total (1 each, optional penalty for extra wrong picks)
-- Model (single choice): 2 points
-- Feasibility (2 binary): 2 points
-- Plan (single choice): 1 point
-**Total = 10 points**
+## Customize
+- Change the three rounds or descriptions in `prompts_rounds.json` under `"rounds"`
+- Edit scenario answer keys in `"scenarios"`

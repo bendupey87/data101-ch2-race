@@ -1,0 +1,215 @@
+{
+  "rounds": [
+    {
+      "round": 1,
+      "scenario_key": "Insurance fraud detection",
+      "title": "Insurance Fraud Detection",
+      "description": "The claims team can only review ~40% of claims. Fraudulent claims are slipping through and costing the company money."
+    },
+    {
+      "round": 2,
+      "scenario_key": "Customer churn at a subscription app",
+      "title": "Customer Churn at a Subscription App",
+      "description": "Monthly active users are stable, but cancellations are rising. Executives want proactive retention."
+    },
+    {
+      "round": 3,
+      "scenario_key": "Late deliveries in an e-commerce warehouse",
+      "title": "Late Deliveries in an E\u2011commerce Warehouse",
+      "description": "On-time delivery has slipped below SLA. Ops suspects bottlenecks in picking/packing and carrier handoffs."
+    }
+  ],
+  "scenarios": {
+    "Insurance fraud detection": {
+      "problem_single": {
+        "question": "Choose the best statement of the business problem:",
+        "options": [
+          "Build a machine learning model to classify claims.",
+          "The company is losing money because fraudulent claims are not identified efficiently.",
+          "The claims team reviews 100% of claims but still misses fraud.",
+          "Data scientists want to try XGBoost."
+        ],
+        "answer_index": 1,
+        "points": 2
+      },
+      "goals_multi": {
+        "question": "Select all appropriate business goals:",
+        "options": [
+          "Reduce financial loss from fraud",
+          "Prioritize investigations on likely-fraudulent claims",
+          "Lower model training time on laptops",
+          "Improve precision/recall on fraud flags"
+        ],
+        "answer_indices": [
+          0,
+          1,
+          3
+        ],
+        "points_each": 1,
+        "penalize_extras": true
+      },
+      "model_single": {
+        "question": "Pick the most appropriate analytics solution:",
+        "options": [
+          "Classification model to score each claim for fraud likelihood",
+          "K-means clustering to segment providers by specialty",
+          "ARIMA time series to forecast monthly premium revenue",
+          "Linear regression to predict claim payout amount only"
+        ],
+        "answer_index": 0,
+        "points": 2
+      },
+      "feasibility_binary": {
+        "question_items": [
+          {
+            "text": "We have historical claims labeled as fraudulent or not.",
+            "answer": "Yes"
+          },
+          {
+            "text": "The business has a workflow to act on flags (claims investigators).",
+            "answer": "Yes"
+          }
+        ],
+        "points_each": 1
+      },
+      "plan_single": {
+        "question": "Which belongs in the analytics plan for this problem?",
+        "options": [
+          "Define the business problem, questions, data needs, model, evaluation, and deployment",
+          "Pick the most popular algorithm on Kaggle and tune it until accuracy is 99%",
+          "Hire more claims adjusters to manually review all claims",
+          "Purchase more servers for training"
+        ],
+        "answer_index": 0,
+        "points": 1
+      }
+    },
+    "Customer churn at a subscription app": {
+      "problem_single": {
+        "question": "Choose the best statement of the business problem:",
+        "options": [
+          "Users are canceling at a high rate and revenue is dropping.",
+          "The data team wants to practice logistic regression.",
+          "The marketing team prefers blue charts.",
+          "Executives are curious about AI."
+        ],
+        "answer_index": 0,
+        "points": 2
+      },
+      "goals_multi": {
+        "question": "Select all appropriate business goals:",
+        "options": [
+          "Reduce churn rate",
+          "Identify at-risk users early",
+          "Increase advisor outreach speed",
+          "Decrease compute costs in the data center"
+        ],
+        "answer_indices": [
+          0,
+          1
+        ],
+        "points_each": 1,
+        "penalize_extras": true
+      },
+      "model_single": {
+        "question": "Pick the most appropriate analytics solution:",
+        "options": [
+          "Classification model to predict churn probability per user",
+          "Image classifier for profile pictures",
+          "ARIMA forecast of daily signups only",
+          "Clustering providers by region"
+        ],
+        "answer_index": 0,
+        "points": 2
+      },
+      "feasibility_binary": {
+        "question_items": [
+          {
+            "text": "We can link historical subscription events to users (joins/labels exist).",
+            "answer": "Yes"
+          },
+          {
+            "text": "The business has a process to contact at-risk users before they cancel.",
+            "answer": "Yes"
+          }
+        ],
+        "points_each": 1
+      },
+      "plan_single": {
+        "question": "Which belongs in the analytics plan for this problem?",
+        "options": [
+          "Define problem/goals, questions, data, model, evaluation, deployment",
+          "Deploy immediately without evaluating errors",
+          "Only look at revenue graphs",
+          "Ask engineers to pick any model"
+        ],
+        "answer_index": 0,
+        "points": 1
+      }
+    },
+    "Late deliveries in an e-commerce warehouse": {
+      "problem_single": {
+        "question": "Choose the best statement of the business problem:",
+        "options": [
+          "We need to rebuild our data lake to be future proof.",
+          "On-time delivery is below SLA due to late shipments and possible bottlenecks in fulfillment.",
+          "Marketing wants to test a new color palette for charts.",
+          "Engineers want to migrate to a new queue system."
+        ],
+        "answer_index": 1,
+        "points": 2
+      },
+      "goals_multi": {
+        "question": "Select all appropriate business goals:",
+        "options": [
+          "Increase on-time delivery rate",
+          "Identify operational bottlenecks",
+          "Minimize average time-in-system (from pick to ship)",
+          "Reduce cloud costs by 50%"
+        ],
+        "answer_indices": [
+          0,
+          1,
+          2
+        ],
+        "points_each": 1,
+        "penalize_extras": true
+      },
+      "model_single": {
+        "question": "Pick the most appropriate analytics solution:",
+        "options": [
+          "A regression/classification model to predict late risk per order and trigger interventions",
+          "GAN to synthesize fake warehouse images",
+          "Topic modeling on customer reviews only",
+          "Vision model for quality inspection of product photos"
+        ],
+        "answer_index": 0,
+        "points": 2
+      },
+      "feasibility_binary": {
+        "question_items": [
+          {
+            "text": "We can link order timestamps across pick, pack, ship, and delivery events.",
+            "answer": "Yes"
+          },
+          {
+            "text": "Operations has a process to expedite/route risky orders differently.",
+            "answer": "Yes"
+          }
+        ],
+        "points_each": 1
+      },
+      "plan_single": {
+        "question": "Which belongs in the analytics plan for this problem?",
+        "options": [
+          "Define problem/goals, questions, data, model, evaluation, deployment",
+          "Only add more pack stations",
+          "Ignore evaluation because shipping is urgent",
+          "Let each shift leader decide their own metrics"
+        ],
+        "answer_index": 0,
+        "points": 1
+      }
+    }
+  }
+}

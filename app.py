@@ -7,21 +7,24 @@ import streamlit as st
 import pandas as pd
 from filelock import FileLock, Timeout
 
-DATA_FILE = Path("submissions_v2.csv")
-LOCK_FILE = Path("submissions_v2.csv.lock")
-PROMPTS_FILE = Path("prompts_explicit.json")
+DATA_FILE = Path("submissions_v3.csv")
+LOCK_FILE = Path("submissions_v3.csv.lock")
+PROMPTS_FILE = Path("prompts_rounds.json")
 
-st.set_page_config(page_title="Business Problem → Solution Race (Explicit Scoring)", layout="wide")
+st.set_page_config(page_title="Business Problem → Solution Race (3 Rounds, Auto-Scenario)", layout="wide")
 
 @st.cache_data
-def load_prompts():
+def load_config():
     with open(PROMPTS_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+        cfg = json.load(f)
+    # Map rounds for quick lookup
+    round_map = {item["round"]: item for item in cfg["rounds"]}
+    return cfg, round_map
 
 def init_storage():
     if not DATA_FILE.exists():
         df = pd.DataFrame(columns=[
-            "ts_iso","round","team","scenario","score",
+            "ts_iso","round","team","scenario_key","scenario_title","score",
             "detail_problem","detail_goals","detail_model","detail_feas","detail_plan"
         ])
         df.to_csv(DATA_FILE, index=False)
@@ -60,21 +63,29 @@ def score_binary(answers, key_items, points_each):
     return total
 
 def main():
-    st.title("🏁 Business Problem → Solution Race — Explicit Scoring")
-    st.caption("Chapter 2: Converting business problems into analytical solutions — no fuzzy matching, only right/wrong choices.")
+    st.title("🏁 Business Problem → Solution Race — Explicit Scoring (3 Rounds)")
+    st.caption("Round determines the scenario. Each round auto-loads a different scenario and description.")
 
-    prompts = load_prompts()
+    cfg, round_map = load_config()
 
     left, right = st.columns([2,1], gap="large")
-
     with left:
         st.subheader("Submit your team's answers")
         with st.form("submit_form", clear_on_submit=True):
             team = st.text_input("Team name", placeholder="e.g., Data Warriors", max_chars=50)
-            scenario = st.selectbox("Scenario", options=list(prompts.keys()))
-            round_num = st.number_input("Round #", 1, 50, value=1, step=1)
+            round_num = st.number_input("Round #", 1, 3, value=1, step=1)
 
-            block = prompts[scenario]
+            # Resolve scenario from round
+            meta = round_map.get(int(round_num))
+            if not meta:
+                st.warning("Round must be 1, 2, or 3.")
+                st.stop()
+
+            st.markdown(f"### Scenario: {meta['title']}")
+            st.caption(meta["description"])
+
+            scenario_key = meta["scenario_key"]
+            block = cfg["scenarios"][scenario_key]
 
             # Problem
             st.markdown("**1) Business problem**")
@@ -86,7 +97,8 @@ def main():
             # Goals (multi)
             st.markdown("**2) Business goals (select all that apply)**")
             goal_labels = block["goals_multi"]["options"]
-            goal_choices = st.multiselect(block["goals_multi"]["question"], options=list(range(len(goal_labels))),
+            goal_choices = st.multiselect(block["goals_multi"]["question"],
+                                          options=list(range(len(goal_labels))),
                                           format_func=lambda i: goal_labels[i])
 
             # Model
@@ -119,7 +131,6 @@ def main():
             elif prob_idx is None or model_idx is None or plan_idx is None:
                 st.warning("Answer all required questions (1, 3, and 5).")
             else:
-                # Score
                 s1 = score_section_single(prob_idx,
                                           block["problem_single"]["answer_index"],
                                           block["problem_single"]["points"])
@@ -138,12 +149,12 @@ def main():
                                           block["plan_single"]["points"])
                 total = s1 + s2 + s3 + s4 + s5
 
-                detail = f"Problem={s1}, Goals={s2}, Model={s3}, Feasibility={s4}, Plan={s5}"
                 row = {
                     "ts_iso": datetime.now(timezone.utc).isoformat(),
                     "round": int(round_num),
                     "team": team.strip(),
-                    "scenario": scenario,
+                    "scenario_key": scenario_key,
+                    "scenario_title": meta["title"],
                     "score": int(total),
                     "detail_problem": s1,
                     "detail_goals": s2,
@@ -152,7 +163,7 @@ def main():
                     "detail_plan": s5,
                 }
                 write_submission(row)
-                st.success(f"Submitted! Score = {total} ({detail})")
+                st.success(f"Submitted! Score = {total} (Problem={s1}, Goals={s2}, Model={s3}, Feasibility={s4}, Plan={s5})")
 
     with right:
         st.subheader("📊 Live Leaderboard")
@@ -160,8 +171,8 @@ def main():
         if df.empty:
             st.info("No submissions yet. Be the first!")
         else:
-            latest_round = int(df["round"].max())
-            show_round = st.number_input("Leaderboard round", 1, latest_round, value=latest_round, step=1)
+            latest_round = int(min(3, max(df["round"].max(), 1)))
+            show_round = st.number_input("Leaderboard round", 1, 3, value=latest_round, step=1)
             view = df[df["round"] == show_round].copy()
             view["ts_iso"] = pd.to_datetime(view["ts_iso"])
             # best per team
@@ -170,7 +181,7 @@ def main():
             best.sort_values(["score","ts_iso"], ascending=[False, True], inplace=True)
             best.insert(0, "rank", range(1, len(best)+1))
             best.rename(columns={"ts_iso":"submitted_utc"}, inplace=True)
-            st.dataframe(best[["rank","team","scenario","score","submitted_utc"]],
+            st.dataframe(best[["rank","team","scenario_title","score","submitted_utc"]],
                          use_container_width=True, hide_index=True)
 
             with st.expander("All submissions (this round)"):
@@ -179,12 +190,10 @@ def main():
 
     st.divider()
     st.subheader("🧑‍🏫 Instructor Controls")
+    st.write("Rounds are fixed: 1=Fraud, 2=Churn, 3=Late Deliveries. Change the round above to play the next scenario.")
     with st.form("instructor"):
-        colA, colB = st.columns([2,1])
-        with colA:
-            action = st.selectbox("Action", ["(choose one)", "Start new round", "Reset all data"])
-        with colB:
-            code = st.text_input("Admin code", type="password", placeholder="enter the code")
+        action = st.selectbox("Action", ["(choose one)", "Reset all data"])
+        code = st.text_input("Admin code", type="password", placeholder="enter the code")
         go = st.form_submit_button("Apply")
 
     admin_code = "letmein"
@@ -192,9 +201,7 @@ def main():
         if code != admin_code:
             st.error("Wrong admin code.")
         else:
-            if action == "Start new round":
-                st.success("Announce the next round and change the round number above to filter the board.")
-            elif action == "Reset all data":
+            if action == "Reset all data":
                 try:
                     lock = FileLock(str(LOCK_FILE))
                     with lock.acquire(timeout=5):
