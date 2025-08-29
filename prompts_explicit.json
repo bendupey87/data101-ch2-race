@@ -1,0 +1,129 @@
+{
+  "Insurance fraud detection": {
+    "problem_single": {
+      "question": "Choose the best statement of the business problem:",
+      "options": [
+        "Build a machine learning model to classify claims.",
+        "The company is losing money because fraudulent claims are not identified efficiently.",
+        "The claims team reviews 100% of claims but still misses fraud.",
+        "Data scientists want to try XGBoost."
+      ],
+      "answer_index": 1,
+      "points": 2
+    },
+    "goals_multi": {
+      "question": "Select all appropriate business goals:",
+      "options": [
+        "Reduce financial loss from fraud",
+        "Prioritize investigations on likely-fraudulent claims",
+        "Lower model training time on laptops",
+        "Improve precision/recall on fraud flags"
+      ],
+      "answer_indices": [
+        0,
+        1,
+        3
+      ],
+      "points_each": 1,
+      "penalize_extras": true
+    },
+    "model_single": {
+      "question": "Pick the most appropriate analytics solution:",
+      "options": [
+        "Classification model to score each claim for fraud likelihood",
+        "K-means clustering to segment providers by specialty",
+        "ARIMA time series to forecast monthly premium revenue",
+        "Linear regression to predict claim payout amount only"
+      ],
+      "answer_index": 0,
+      "points": 2
+    },
+    "feasibility_binary": {
+      "question_items": [
+        {
+          "text": "We have historical claims labeled as fraudulent or not.",
+          "answer": "Yes"
+        },
+        {
+          "text": "The business has a workflow to act on flags (claims investigators).",
+          "answer": "Yes"
+        }
+      ],
+      "points_each": 1
+    },
+    "plan_single": {
+      "question": "Which belongs in the analytics plan for this problem?",
+      "options": [
+        "Define the business problem, questions, data needs, model, evaluation, and deployment",
+        "Pick the most popular algorithm on Kaggle and tune it until accuracy is 99%",
+        "Hire more claims adjusters to manually review all claims",
+        "Purchase more servers for training"
+      ],
+      "answer_index": 0,
+      "points": 1
+    }
+  },
+  "Customer churn at a subscription app": {
+    "problem_single": {
+      "question": "Choose the best statement of the business problem:",
+      "options": [
+        "Users are canceling at a high rate and revenue is dropping.",
+        "The data team wants to practice logistic regression.",
+        "The marketing team prefers blue charts.",
+        "Executives are curious about AI."
+      ],
+      "answer_index": 0,
+      "points": 2
+    },
+    "goals_multi": {
+      "question": "Select all appropriate business goals:",
+      "options": [
+        "Reduce churn rate",
+        "Identify at-risk users early",
+        "Increase advisor outreach speed",
+        "Decrease compute costs in the data center"
+      ],
+      "answer_indices": [
+        0,
+        1
+      ],
+      "points_each": 1,
+      "penalize_extras": true
+    },
+    "model_single": {
+      "question": "Pick the most appropriate analytics solution:",
+      "options": [
+        "Classification model to predict churn probability per user",
+        "Image classifier for profile pictures",
+        "ARIMA forecast of daily signups only",
+        "Clustering providers by region"
+      ],
+      "answer_index": 0,
+      "points": 2
+    },
+    "feasibility_binary": {
+      "question_items": [
+        {
+          "text": "We can link historical subscription events to users (joins/labels exist).",
+          "answer": "Yes"
+        },
+        {
+          "text": "The business has a process to contact at-risk users before they cancel.",
+          "answer": "Yes"
+        }
+      ],
+      "points_each": 1
+    },
+    "plan_single": {
+      "question": "Which belongs in the analytics plan for this problem?",
+      "options": [
+        "Define problem/goals, questions, data, model, evaluation, deployment",
+        "Deploy immediately without evaluating errors",
+        "Only look at revenue graphs",
+        "Ask engineers to pick any model"
+      ],
+      "answer_index": 0,
+      "points": 1
+    }
+  }
+}
