@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 from datetime import datetime, timezone
+import os
 
 import streamlit as st
 import pandas as pd
@@ -71,9 +72,10 @@ def main():
     left, right = st.columns([2,1], gap="large")
     with left:
         st.subheader("Submit your team's answers")
+        team = None  # (optional, just to make the order clear)
+        round_num = st.number_input("Round #", 1, 3, value=1, step=1)
         with st.form("submit_form", clear_on_submit=True):
             team = st.text_input("Team name", placeholder="e.g., Data Warriors", max_chars=50)
-            round_num = st.number_input("Round #", 1, 3, value=1, step=1)
 
             # Resolve scenario from round
             meta = round_map.get(int(round_num))
@@ -196,7 +198,8 @@ def main():
         code = st.text_input("Admin code", type="password", placeholder="enter the code")
         go = st.form_submit_button("Apply")
 
-    admin_code = "letmein"
+    admin_code = os.getenv("ADMIN_CODE", "letmein")
+
     if go:
         if code != admin_code:
             st.error("Wrong admin code.")
