@@ -6,6 +6,7 @@ import os
 import streamlit as st
 import pandas as pd
 from filelock import FileLock, Timeout
+import streamlit_javascript as st_js
 
 DATA_FILE = Path("submissions_v3.csv")
 LOCK_FILE = Path("submissions_v3.csv.lock")
@@ -211,8 +212,18 @@ draw();
 document.getElementById('gameStatus').innerText = 'Click the canvas to jump! Avoid red obstacles. Survive to 60 points.';
 </script>
 '''
-            minigame_result = st.session_state.get("minigame_result", False)
             components.html(minigame_html, height=160)
+            # Listen for win event from JS
+            st_js.javascript(
+                """
+                window.addEventListener('message', function(event) {
+                    if (event.data && event.data.minigame_win) {
+                        window.parent.postMessage({streamlit_setSessionState: {minigame_result: true}}, '*');
+                    }
+                });
+                """
+            )
+            minigame_result = st.session_state.get("minigame_result", False)
             submitted = st.form_submit_button("Submit answers 🧮", disabled=not minigame_result)
             # Save state
             form_state["team"] = team
