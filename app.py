@@ -131,18 +131,92 @@ def main():
                                  options=list(range(len(block["plan_single"]["options"]))),
                                  format_func=lambda i: block["plan_single"]["options"][i],
                                  index=form_state["plan_idx"])
-            # Mini-game: simple math challenge
+            # Mini-game: Interactive side-scroller (HTML/JS)
             st.markdown("---")
             st.markdown("### 🎮 Mini-Game Challenge (required)")
-            st.caption("Solve this to submit your answers! (Random math, 30-90 seconds)")
-            import random
-            if "minigame_a" not in st.session_state:
-                st.session_state["minigame_a"] = random.randint(10, 99)
-            if "minigame_b" not in st.session_state:
-                st.session_state["minigame_b"] = random.randint(10, 99)
-            minigame_a = st.session_state["minigame_a"]
-            minigame_b = st.session_state["minigame_b"]
-            minigame_answer = st.number_input(f"What is {minigame_a} + {minigame_b}?", value=form_state["minigame_value"] or 0, step=1)
+            st.caption("Play and win the mini-game to submit your answers!")
+            import streamlit.components.v1 as components
+            minigame_html = '''
+            <style>
+            #gameCanvas { background: #f4f4f4; border: 2px solid #333; }
+            </style>
+            <canvas id="gameCanvas" width="400" height="100"></canvas>
+            <div id="gameStatus"></div>
+            <script>
+            let canvas = document.getElementById('gameCanvas');
+            let ctx = canvas.getContext('2d');
+            let dino = { x: 30, y: 70, w: 20, h: 20, vy: 0, jumping: false };
+            let obstacles = [];
+            let score = 0;
+            let gameOver = false;
+            let started = false;
+            function drawDino() {
+                ctx.fillStyle = '#2c3e50';
+                ctx.fillRect(dino.x, dino.y, dino.w, dino.h);
+            }
+            function drawObstacles() {
+                ctx.fillStyle = '#e74c3c';
+                obstacles.forEach(o => ctx.fillRect(o.x, o.y, o.w, o.h));
+            }
+            function updateObstacles() {
+                obstacles.forEach(o => o.x -= 4);
+                if (obstacles.length === 0 || obstacles[obstacles.length-1].x < 250) {
+                    obstacles.push({ x: 400, y: 80, w: 15, h: 20 });
+                }
+                obstacles = obstacles.filter(o => o.x + o.w > 0);
+            }
+            function checkCollision() {
+                for (let o of obstacles) {
+                    if (dino.x < o.x + o.w && dino.x + dino.w > o.x && dino.y < o.y + o.h && dino.y + dino.h > o.y) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            function draw() {
+                ctx.clearRect(0,0,400,100);
+                drawDino();
+                drawObstacles();
+                ctx.fillStyle = '#333';
+                ctx.font = '16px Arial';
+                ctx.fillText('Score: ' + score, 320, 20);
+            }
+            function gameLoop() {
+                if (!started || gameOver) return;
+                dino.y += dino.vy;
+                if (dino.jumping) dino.vy += 1;
+                if (dino.y >= 70) { dino.y = 70; dino.vy = 0; dino.jumping = false; }
+                updateObstacles();
+                if (checkCollision()) {
+                    gameOver = true;
+                    document.getElementById('gameStatus').innerText = 'Game Over! Refresh to try again.';
+                } else {
+                    score++;
+                    if (score >= 60) {
+                        gameOver = true;
+                        document.getElementById('gameStatus').innerText = 'You win! You may submit.';
+                        window.parent.postMessage({ minigame_win: true }, '*');
+                    }
+                }
+                draw();
+                if (!gameOver) requestAnimationFrame(gameLoop);
+            }
+            canvas.onclick = function() {
+                if (!started) { started = true; gameLoop(); return; }
+                if (!dino.jumping) { dino.vy = -12; dino.jumping = true; }
+            };
+            draw();
+            document.getElementById('gameStatus').innerText = 'Click the canvas to jump! Avoid red obstacles. Survive to 60 points.';
+            </script>
+            '''
+            minigame_result = st.session_state.get("minigame_result", False)
+            # Listen for win event
+            components.html(minigame_html, height=160)
+            # JS->Python communication workaround
+            # User must click 'I won!' after winning
+            if not minigame_result:
+                minigame_result = st.checkbox("I won the mini-game! (Check after you see 'You win!')")
+                st.session_state["minigame_result"] = minigame_result
             submitted = st.form_submit_button("Submit answers 🧮")
             # Save state
             form_state["team"] = team
@@ -151,17 +225,17 @@ def main():
             form_state["model_idx"] = model_idx
             form_state["feas_answers"] = [0 if ans=="Yes" else 1 for ans in feas_answers]
             form_state["plan_idx"] = plan_idx
-            form_state["minigame_value"] = minigame_answer
         # Submission logic
         if submitted:
             # Check mini-game
-            if minigame_answer != minigame_a + minigame_b:
-                st.warning("Mini-game answer is incorrect! Try again.")
+            if not st.session_state.get("minigame_result", False):
+                st.warning("You must win the mini-game before submitting!")
             elif not team.strip():
                 st.warning("Enter a team name.")
             elif prob_idx is None or model_idx is None or plan_idx is None:
                 st.warning("Answer all required questions (1, 3, and 5).")
             else:
+                # Score calculation
                 s1 = score_section_single(prob_idx,
                                           block["problem_single"]["answer_index"],
                                           block["problem_single"]["points"])
@@ -193,7 +267,17 @@ def main():
                     "detail_plan": s5,
                 }
                 write_submission(row)
-                st.success(f"Submitted! Score = {total} (Problem={s1}, Goals={s2}, Model={s3}, Feasibility={s4}, Plan={s5})")
+                # Per-question feedback
+                feedback = []
+                feedback.append(f"**Business problem:** {'✅ Correct' if s1 else '❌ Incorrect'}")
+                feedback.append(f"**Business goals:** {'✅ Correct' if s2 else '❌ Incorrect'}")
+                feedback.append(f"**Analytics solution/model:** {'✅ Correct' if s3 else '❌ Incorrect'}")
+                feedback.append(f"**Feasibility:** {'✅ Correct' if s4 == len(feas_items)*block['feasibility_binary']['points_each'] else '❌ Incorrect'}")
+                feedback.append(f"**Analytics plan:** {'✅ Correct' if s5 else '❌ Incorrect'}")
+                st.success(f"Submitted! Score = {total}")
+                st.markdown("### Your Results:")
+                for f in feedback:
+                    st.markdown(f)
                 # Reset form state and mini-game
                 st.session_state["form_state"] = {
                     "team": "",
@@ -202,11 +286,8 @@ def main():
                     "model_idx": None,
                     "feas_answers": [],
                     "plan_idx": None,
-                    "minigame_done": False,
-                    "minigame_value": None,
                 }
-                st.session_state.pop("minigame_a", None)
-                st.session_state.pop("minigame_b", None)
+                st.session_state["minigame_result"] = False
 
     with right:
         st.subheader("📊 Live Leaderboard")
