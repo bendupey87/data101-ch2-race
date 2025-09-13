@@ -6,7 +6,6 @@ import os
 import streamlit as st
 import pandas as pd
 from filelock import FileLock, Timeout
-import streamlit_javascript as st_js
 
 DATA_FILE = Path("submissions_v3.csv")
 LOCK_FILE = Path("submissions_v3.csv.lock")
@@ -198,7 +197,6 @@ function gameLoop() {
         if (score >= 60) {
             gameOver = true;
             document.getElementById('gameStatus').innerText = 'You win! You may submit.';
-            window.parent.postMessage({ minigame_win: true }, '*');
         }
     }
     draw();
@@ -213,25 +211,19 @@ document.getElementById('gameStatus').innerText = 'Click the canvas to jump! Avo
 </script>
 '''
             components.html(minigame_html, height=160)
-            # Listen for win event from JS
-            st_js.javascript(
-                """
-                window.addEventListener('message', function(event) {
-                    if (event.data && event.data.minigame_win) {
-                        window.parent.postMessage({streamlit_setSessionState: {minigame_result: true}}, '*');
-                    }
-                });
-                """
-            )
-            minigame_result = st.session_state.get("minigame_result", False)
-            submitted = st.form_submit_button("Submit answers 🧮", disabled=not minigame_result)
-            # Save state
-            form_state["team"] = team
-            form_state["prob_idx"] = prob_idx
-            form_state["goal_choices"] = goal_choices
-            form_state["model_idx"] = model_idx
-            form_state["feas_answers"] = [0 if ans=="Yes" else 1 for ans in feas_answers]
-            form_state["plan_idx"] = plan_idx
+            # Always enable submit, but warn if not won
+            minigame_result = False  # Can't sync JS to Python, so always False
+            submitted = st.form_submit_button("Submit answers 🧮")
+            if submitted:
+                # Check if user saw the win message
+                st.info("If you did not see 'You win! You may submit.' in the mini-game, your submission will not count.")
+                # Save state
+                form_state["team"] = team
+                form_state["prob_idx"] = prob_idx
+                form_state["goal_choices"] = goal_choices
+                form_state["model_idx"] = model_idx
+                form_state["feas_answers"] = [0 if ans=="Yes" else 1 for ans in feas_answers]
+                form_state["plan_idx"] = plan_idx
         # Submission logic
         if submitted:
             if not minigame_result:
