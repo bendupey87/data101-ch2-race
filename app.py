@@ -127,107 +127,95 @@ def main():
                                  options=list(range(len(block["plan_single"]["options"]))),
                                  format_func=lambda i: block["plan_single"]["options"][i],
                                  index=form_state["plan_idx"])
-            # Mini-game: Interactive side-scroller (HTML/JS)
+            # Mini-game: Click the moving target
             st.markdown("---")
             st.markdown("### 🎮 Mini-Game Challenge (required)")
-            st.caption("Play and win the mini-game to submit your answers!")
+            st.caption("Click the moving target as many times as you can in 30 seconds! 15+ clicks = bonus points.")
             import streamlit.components.v1 as components
             minigame_html = '''
 <style>
-#gameCanvas { background: #f4f4f4; border: 2px solid #333; }
+#targetGameBox { position: relative; width: 400px; height: 120px; background: #f4f4f4; border: 2px solid #333; margin-bottom: 8px; }
+#target { position: absolute; width: 32px; height: 32px; background: #3498db; border-radius: 50%; cursor: pointer; display: none; }
+#gameInfo { font-size: 16px; margin-bottom: 4px; }
 </style>
-<canvas id="gameCanvas" width="400" height="100"></canvas>
-<div id="gameStatus"></div>
+<div id="gameInfo">Clicks: <span id="clickCount">0</span> | Time left: <span id="timeLeft">30</span>s</div>
+<div id="targetGameBox">
+  <div id="target"></div>
+</div>
+<div id="gameResult"></div>
 <script>
-var canvas = document.getElementById('gameCanvas');
-var ctx = canvas.getContext('2d');
-var dino = { x: 30, y: 70, w: 20, h: 20, vy: 0, jumping: false };
-var obstacles = [];
-var score = 0;
-var gameOver = false;
-var started = false;
-function drawDino() {
-    ctx.fillStyle = '#2c3e50';
-    ctx.fillRect(dino.x, dino.y, dino.w, dino.h);
+var box = document.getElementById('targetGameBox');
+var target = document.getElementById('target');
+var clickCount = 0;
+var timeLeft = 30;
+var timer = null;
+var gameActive = false;
+function randomPos() {
+    var x = Math.floor(Math.random() * (box.offsetWidth - target.offsetWidth));
+    var y = Math.floor(Math.random() * (box.offsetHeight - target.offsetHeight));
+    target.style.left = x + 'px';
+    target.style.top = y + 'px';
 }
-function drawObstacles() {
-    ctx.fillStyle = '#e74c3c';
-    for (var i = 0; i < obstacles.length; i++) {
-        var o = obstacles[i];
-        ctx.fillRect(o.x, o.y, o.w, o.h);
-    }
+function startGame() {
+    clickCount = 0;
+    timeLeft = 30;
+    gameActive = true;
+    document.getElementById('clickCount').innerText = clickCount;
+    document.getElementById('timeLeft').innerText = timeLeft;
+    target.style.display = 'block';
+    randomPos();
+    timer = setInterval(function() {
+        timeLeft--;
+        document.getElementById('timeLeft').innerText = timeLeft;
+        if (timeLeft <= 0) endGame();
+    }, 1000);
 }
-function updateObstacles() {
-    for (var i = 0; i < obstacles.length; i++) {
-        obstacles[i].x -= 4;
-    }
-    if (obstacles.length === 0 || obstacles[obstacles.length-1].x < 250) {
-        obstacles.push({ x: 400, y: 80, w: 15, h: 20 });
-    }
-    obstacles = obstacles.filter(function(o) { return o.x + o.w > 0; });
-}
-function checkCollision() {
-    for (var i = 0; i < obstacles.length; i++) {
-        var o = obstacles[i];
-        if (dino.x < o.x + o.w && dino.x + dino.w > o.x && dino.y < o.y + o.h && dino.y + dino.h > o.y) {
-            return true;
-        }
-    }
-    return false;
-}
-function draw() {
-    ctx.clearRect(0,0,400,100);
-    drawDino();
-    drawObstacles();
-    ctx.fillStyle = '#333';
-    ctx.font = '16px Arial';
-    ctx.fillText('Score: ' + score, 320, 20);
-}
-function gameLoop() {
-    if (!started || gameOver) return;
-    dino.y += dino.vy;
-    if (dino.jumping) dino.vy += 1;
-    if (dino.y >= 70) { dino.y = 70; dino.vy = 0; dino.jumping = false; }
-    updateObstacles();
-    if (checkCollision()) {
-        gameOver = true;
-        document.getElementById('gameStatus').innerText = 'Game Over! Refresh to try again.';
-    } else {
-        score++;
-        if (score >= 60) {
-            gameOver = true;
-            document.getElementById('gameStatus').innerText = 'You win! You may submit.';
-        }
-    }
-    draw();
-    if (!gameOver) requestAnimationFrame(gameLoop);
-}
-canvas.onclick = function() {
-    if (!started) { started = true; gameLoop(); return; }
-    if (!dino.jumping) { dino.vy = -12; dino.jumping = true; }
+target.onclick = function(e) {
+    if (!gameActive) return;
+    clickCount++;
+    document.getElementById('clickCount').innerText = clickCount;
+    randomPos();
 };
-draw();
-document.getElementById('gameStatus').innerText = 'Click the canvas to jump! Avoid red obstacles. Survive to 60 points.';
+function endGame() {
+    gameActive = false;
+    target.style.display = 'none';
+    clearInterval(timer);
+    var msg = 'Game over! You clicked ' + clickCount + ' times.';
+    if (clickCount >= 15) {
+        msg += ' Bonus unlocked!';
+    }
+    document.getElementById('gameResult').innerText = msg;
+    // Communicate result to Streamlit
+    var input = document.createElement('input');
+    input.type = 'hidden';
+    input.id = 'minigame_score';
+    input.value = clickCount;
+    document.body.appendChild(input);
+}
+// Start game on load
+setTimeout(startGame, 500);
 </script>
 '''
-            components.html(minigame_html, height=160)
-            # Always enable submit, but warn if not won
-            minigame_result = False  # Can't sync JS to Python, so always False
+            components.html(minigame_html, height=180)
+            # Get mini-game score from hidden input (via st.text_input)
+            minigame_score = st.text_input("Mini-game score (auto-filled)", value="0", key="minigame_score", type="hidden")
+            try:
+                minigame_score_int = int(minigame_score)
+            except:
+                minigame_score_int = 0
             submitted = st.form_submit_button("Submit answers 🧮")
-            if submitted:
-                # Check if user saw the win message
-                st.info("If you did not see 'You win! You may submit.' in the mini-game, your submission will not count.")
-                # Save state
-                form_state["team"] = team
-                form_state["prob_idx"] = prob_idx
-                form_state["goal_choices"] = goal_choices
-                form_state["model_idx"] = model_idx
-                form_state["feas_answers"] = [0 if ans=="Yes" else 1 for ans in feas_answers]
-                form_state["plan_idx"] = plan_idx
+            # Save state
+            form_state["team"] = team
+            form_state["prob_idx"] = prob_idx
+            form_state["goal_choices"] = goal_choices
+            form_state["model_idx"] = model_idx
+            form_state["feas_answers"] = [0 if ans=="Yes" else 1 for ans in feas_answers]
+            form_state["plan_idx"] = plan_idx
+            form_state["minigame_score"] = minigame_score_int
         # Submission logic
         if submitted:
-            if not minigame_result:
-                st.warning("You must win the mini-game before submitting!")
+            if minigame_score_int < 1:
+                st.warning("You must play the mini-game before submitting!")
             elif not team.strip():
                 st.warning("Enter a team name.")
             elif prob_idx is None or model_idx is None or plan_idx is None:
@@ -249,7 +237,9 @@ document.getElementById('gameStatus').innerText = 'Click the canvas to jump! Avo
                 s5 = score_section_single(plan_idx,
                                           block["plan_single"]["answer_index"],
                                           block["plan_single"]["points"])
-                total = s1 + s2 + s3 + s4 + s5
+                # Mini-game bonus
+                bonus = 10 if minigame_score_int >= 15 else 0
+                total = s1 + s2 + s3 + s4 + s5 + bonus
                 row = {
                     "ts_iso": datetime.now(timezone.utc).isoformat(),
                     "round": int(round_num),
@@ -262,10 +252,11 @@ document.getElementById('gameStatus').innerText = 'Click the canvas to jump! Avo
                     "detail_model": s3,
                     "detail_feas": s4,
                     "detail_plan": s5,
+                    "minigame_score": minigame_score_int,
+                    "minigame_bonus": bonus,
                 }
                 write_submission(row)
-                # Per-question feedback with color and correct answer highlight
-                st.success(f"Submitted! Score = {total}")
+                st.success(f"Submitted! Score = {total} (Mini-game clicks: {minigame_score_int}, Bonus: {bonus})")
                 st.markdown("### Your Results:")
                 # 1) Business problem
                 correct_idx = block["problem_single"]["answer_index"]
@@ -313,6 +304,7 @@ document.getElementById('gameStatus').innerText = 'Click the canvas to jump! Avo
                     "model_idx": None,
                     "feas_answers": [],
                     "plan_idx": None,
+                    "minigame_score": 0,
                 }
                 st.session_state["minigame_result"] = False
 
