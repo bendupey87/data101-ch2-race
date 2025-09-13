@@ -67,7 +67,7 @@ def main():
     st.title("🏁 Business Problem → Solution Race — Explicit Scoring (3 Rounds)")
     st.caption("Round determines the scenario. Each round auto-loads a different scenario and description.")
 
-            minigame_html = '''
+        minigame_html = '''
 <style>
 #gameCanvas { background: #f4f4f4; border: 2px solid #333; }
 </style>
@@ -145,7 +145,7 @@ canvas.onclick = function() {
 draw();
 document.getElementById('gameStatus').innerText = 'Click the canvas to jump! Avoid red obstacles. Survive to 60 points.';
 </script>
-            '''
+'''
             };
             draw();
             document.getElementById('gameStatus').innerText = 'Click the canvas to jump! Avoid red obstacles. Survive to 60 points.';
