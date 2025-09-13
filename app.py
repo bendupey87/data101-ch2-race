@@ -143,6 +143,7 @@ def main():
   <div id="target"></div>
 </div>
 <div id="gameResult"></div>
+<input type="hidden" id="minigame_score_hidden" value="0" />
 <script>
 var box = document.getElementById('targetGameBox');
 var target = document.getElementById('target');
@@ -166,6 +167,7 @@ function startGame() {
     document.getElementById('timeLeft').innerText = timeLeft;
     target.style.display = 'block';
     randomPos();
+    document.getElementById('minigame_score_hidden').value = 0;
 }
 target.onclick = function(e) {
     if (!gameActive) return;
@@ -190,24 +192,33 @@ function endGame() {
         msg += ' Bonus unlocked!';
     }
     document.getElementById('gameResult').innerText = msg;
-    // Communicate result to Streamlit
-    var input = document.createElement('input');
-    input.type = 'text';
-    input.id = 'minigame_score';
-    input.value = clickCount;
-    document.body.appendChild(input);
+    document.getElementById('minigame_score_hidden').value = clickCount;
 }
 // Start game on load
 setTimeout(startGame, 500);
 </script>
 '''
-            components.html(minigame_html, height=180)
-            # Get mini-game score from hidden input (via st.text_input)
-            minigame_score = st.text_input("Mini-game score (auto-filled)", value="0", key="minigame_score")
-            try:
-                minigame_score_int = int(minigame_score)
-            except:
-                minigame_score_int = 0
+            components.html(minigame_html, height=200)
+            # Read mini-game score from hidden input using JS injection
+            minigame_score_int = st.session_state.get("minigame_score", 0)
+            minigame_score_js = """
+<script>
+window.addEventListener('DOMContentLoaded', function() {
+    setInterval(function() {
+        var val = document.getElementById('minigame_score_hidden').value;
+        if (window.parent) {
+            window.parent.postMessage({minigame_score: val}, '*');
+        }
+    }, 500);
+});
+</script>
+"""
+            st.markdown(minigame_score_js, unsafe_allow_html=True)
+            # Use Streamlit's session state to update score
+            import streamlit as st
+            if "minigame_score" not in st.session_state:
+                st.session_state["minigame_score"] = 0
+            # Use JS to update session state via postMessage (Streamlit can't do this natively, so user must click submit after game ends)
             submitted = st.form_submit_button("Submit answers 🧮")
             # Save state
             form_state["team"] = team
@@ -216,9 +227,15 @@ setTimeout(startGame, 500);
             form_state["model_idx"] = model_idx
             form_state["feas_answers"] = [0 if ans=="Yes" else 1 for ans in feas_answers]
             form_state["plan_idx"] = plan_idx
-            form_state["minigame_score"] = minigame_score_int
         # Submission logic
         if submitted:
+            # Try to get score from JS hidden input
+            import streamlit.components.v1 as components
+            minigame_score = st.experimental_get_query_params().get("minigame_score_hidden", ["0"])[0]
+            try:
+                minigame_score_int = int(minigame_score)
+            except:
+                minigame_score_int = 0
             if minigame_score_int < 1:
                 st.warning("You must play the mini-game before submitting!")
             elif not team.strip():
@@ -309,9 +326,8 @@ setTimeout(startGame, 500);
                     "model_idx": None,
                     "feas_answers": [],
                     "plan_idx": None,
-                    "minigame_score": 0,
                 }
-                st.session_state["minigame_result"] = False
+                st.session_state["minigame_score"] = 0
 
     with right:
         st.subheader("📊 Live Leaderboard")
