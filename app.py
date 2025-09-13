@@ -70,65 +70,94 @@ def main():
     cfg, round_map = load_config()
 
     left, right = st.columns([2,1], gap="large")
+    # State for form persistence
+    if "form_state" not in st.session_state:
+        st.session_state["form_state"] = {
+            "team": "",
+            "prob_idx": None,
+            "goal_choices": [],
+            "model_idx": None,
+            "feas_answers": [],
+            "plan_idx": None,
+            "minigame_done": False,
+            "minigame_value": None,
+        }
+    form_state = st.session_state["form_state"]
     with left:
         st.subheader("Submit your team's answers")
-        team = None  # (optional, just to make the order clear)
         round_num = st.number_input("Round #", 1, 3, value=1, step=1)
-        with st.form("submit_form", clear_on_submit=True):
-            team = st.text_input("Team name", placeholder="e.g., Data Warriors", max_chars=50)
-
-            # Resolve scenario from round
-            meta = round_map.get(int(round_num))
-            if not meta:
-                st.warning("Round must be 1, 2, or 3.")
-                st.stop()
-
-            st.markdown(f"### Scenario: {meta['title']}")
-            st.caption(meta["description"])
-
-            scenario_key = meta["scenario_key"]
-            block = cfg["scenarios"][scenario_key]
-
+        meta = round_map.get(int(round_num))
+        if not meta:
+            st.warning("Round must be 1, 2, or 3.")
+            st.stop()
+        st.markdown(f"### Scenario: {meta['title']}")
+        st.caption(meta["description"])
+        scenario_key = meta["scenario_key"]
+        block = cfg["scenarios"][scenario_key]
+        with st.form("submit_form", clear_on_submit=False):
+            # Team name
+            team = st.text_input("Team name", value=form_state["team"], placeholder="e.g., Data Warriors", max_chars=50)
             # Problem
-            st.markdown("**1) Business problem**")
+            st.markdown(f"**1) Business problem** _(Points: {block['problem_single']['points']})_")
             prob_idx = st.radio(block["problem_single"]["question"],
                                 options=list(range(len(block["problem_single"]["options"]))),
                                 format_func=lambda i: block["problem_single"]["options"][i],
-                                index=None)
-
+                                index=form_state["prob_idx"])
             # Goals (multi)
-            st.markdown("**2) Business goals (select all that apply)**")
+            st.markdown(f"**2) Business goals (select all that apply)** _(Points: {block['goals_multi']['points_each']} each)_")
             goal_labels = block["goals_multi"]["options"]
             goal_choices = st.multiselect(block["goals_multi"]["question"],
                                           options=list(range(len(goal_labels))),
-                                          format_func=lambda i: goal_labels[i])
-
+                                          format_func=lambda i: goal_labels[i],
+                                          default=form_state["goal_choices"])
             # Model
-            st.markdown("**3) Analytics solution/model**")
+            st.markdown(f"**3) Analytics solution/model** _(Points: {block['model_single']['points']})_")
             model_idx = st.radio(block["model_single"]["question"],
                                  options=list(range(len(block["model_single"]["options"]))),
                                  format_func=lambda i: block["model_single"]["options"][i],
-                                 index=None)
-
+                                 index=form_state["model_idx"])
             # Feasibility (binary)
-            st.markdown("**4) Feasibility**")
+            st.markdown(f"**4) Feasibility** _(Points: {block['feasibility_binary']['points_each']} each)_")
             feas_items = block["feasibility_binary"]["question_items"]
             feas_answers = []
-            for item in feas_items:
-                ans = st.radio(item["text"], options=["Yes","No"], horizontal=True, index=0)
+            for i, item in enumerate(feas_items):
+                ans = st.radio(item["text"], options=["Yes","No"], horizontal=True,
+                               index=form_state["feas_answers"][i] if len(form_state["feas_answers"]) > i else 0,
+                               key=f"feas_{i}")
                 feas_answers.append(ans)
-
             # Plan
-            st.markdown("**5) Analytics plan**")
+            st.markdown(f"**5) Analytics plan** _(Points: {block['plan_single']['points']})_")
             plan_idx = st.radio(block["plan_single"]["question"],
                                  options=list(range(len(block["plan_single"]["options"]))),
                                  format_func=lambda i: block["plan_single"]["options"][i],
-                                 index=None)
-
+                                 index=form_state["plan_idx"])
+            # Mini-game: simple math challenge
+            st.markdown("---")
+            st.markdown("### 🎮 Mini-Game Challenge (required)")
+            st.caption("Solve this to submit your answers! (Random math, 30-90 seconds)")
+            import random
+            if "minigame_a" not in st.session_state:
+                st.session_state["minigame_a"] = random.randint(10, 99)
+            if "minigame_b" not in st.session_state:
+                st.session_state["minigame_b"] = random.randint(10, 99)
+            minigame_a = st.session_state["minigame_a"]
+            minigame_b = st.session_state["minigame_b"]
+            minigame_answer = st.number_input(f"What is {minigame_a} + {minigame_b}?", value=form_state["minigame_value"] or 0, step=1)
             submitted = st.form_submit_button("Submit answers 🧮")
-
+            # Save state
+            form_state["team"] = team
+            form_state["prob_idx"] = prob_idx
+            form_state["goal_choices"] = goal_choices
+            form_state["model_idx"] = model_idx
+            form_state["feas_answers"] = [0 if ans=="Yes" else 1 for ans in feas_answers]
+            form_state["plan_idx"] = plan_idx
+            form_state["minigame_value"] = minigame_answer
+        # Submission logic
         if submitted:
-            if not team.strip():
+            # Check mini-game
+            if minigame_answer != minigame_a + minigame_b:
+                st.warning("Mini-game answer is incorrect! Try again.")
+            elif not team.strip():
                 st.warning("Enter a team name.")
             elif prob_idx is None or model_idx is None or plan_idx is None:
                 st.warning("Answer all required questions (1, 3, and 5).")
@@ -143,14 +172,13 @@ def main():
                 s3 = score_section_single(model_idx,
                                           block["model_single"]["answer_index"],
                                           block["model_single"]["points"])
-                s4 = score_binary(feas_answers,
+                s4 = score_binary(["Yes" if i==0 else "No" for i in form_state["feas_answers"]],
                                   feas_items,
                                   block["feasibility_binary"]["points_each"])
                 s5 = score_section_single(plan_idx,
                                           block["plan_single"]["answer_index"],
                                           block["plan_single"]["points"])
                 total = s1 + s2 + s3 + s4 + s5
-
                 row = {
                     "ts_iso": datetime.now(timezone.utc).isoformat(),
                     "round": int(round_num),
@@ -166,6 +194,19 @@ def main():
                 }
                 write_submission(row)
                 st.success(f"Submitted! Score = {total} (Problem={s1}, Goals={s2}, Model={s3}, Feasibility={s4}, Plan={s5})")
+                # Reset form state and mini-game
+                st.session_state["form_state"] = {
+                    "team": "",
+                    "prob_idx": None,
+                    "goal_choices": [],
+                    "model_idx": None,
+                    "feas_answers": [],
+                    "plan_idx": None,
+                    "minigame_done": False,
+                    "minigame_value": None,
+                }
+                st.session_state.pop("minigame_a", None)
+                st.session_state.pop("minigame_b", None)
 
     with right:
         st.subheader("📊 Live Leaderboard")

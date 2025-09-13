@@ -49,12 +49,12 @@
         "penalize_extras": true
       },
       "model_single": {
-        "question": "Pick the most appropriate analytics solution:",
+        "question": "Which type of analytics approach best fits this problem?",
         "options": [
-          "Classification model to score each claim for fraud likelihood",
-          "K-means clustering to segment providers by specialty",
-          "ARIMA time series to forecast monthly premium revenue",
-          "Linear regression to predict claim payout amount only"
+          "Predictive analytics to estimate fraud risk for each claim",
+          "Prescriptive analytics to recommend actions for each claim",
+          "Clustering to group claims by similarity",
+          "Descriptive analytics to summarize past fraud cases"
         ],
         "answer_index": 0,
         "points": 2
@@ -62,11 +62,11 @@
       "feasibility_binary": {
         "question_items": [
           {
-            "text": "We have historical claims labeled as fraudulent or not.",
+            "text": "Do we have enough data to identify patterns of fraud?",
             "answer": "Yes"
           },
           {
-            "text": "The business has a workflow to act on flags (claims investigators).",
+            "text": "Can the business act on analytics results to reduce fraud?",
             "answer": "Yes"
           }
         ],
@@ -125,11 +125,11 @@
       "feasibility_binary": {
         "question_items": [
           {
-            "text": "We can link historical subscription events to users (joins/labels exist).",
+            "text": "Do we have enough data to spot users who might cancel soon?",
             "answer": "Yes"
           },
           {
-            "text": "The business has a process to contact at-risk users before they cancel.",
+            "text": "Is there a way for the business to reach out to at-risk users before they leave?",
             "answer": "Yes"
           }
         ],
@@ -189,11 +189,11 @@
       "feasibility_binary": {
         "question_items": [
           {
-            "text": "We can link order timestamps across pick, pack, ship, and delivery events.",
+            "text": "Do we have enough data to track where delays happen in the warehouse process?",
             "answer": "Yes"
           },
           {
-            "text": "Operations has a process to expedite/route risky orders differently.",
+            "text": "Can the business use analytics to improve delivery speed or fix bottlenecks?",
             "answer": "Yes"
           }
         ],
