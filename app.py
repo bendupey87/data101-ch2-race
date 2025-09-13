@@ -130,7 +130,7 @@ def main():
             # Mini-game: Click the moving target
             st.markdown("---")
             st.markdown("### 🎮 Mini-Game Challenge (required)")
-            st.caption("Click the moving target as many times as you can in 30 seconds! 15+ clicks = bonus points.")
+            st.caption("Click the moving target as many times as you can in 15 seconds! 15+ clicks = bonus points.")
             import streamlit.components.v1 as components
             minigame_html = '''
 <style>
@@ -138,7 +138,7 @@ def main():
 #target { position: absolute; width: 32px; height: 32px; background: #3498db; border-radius: 50%; cursor: pointer; display: none; }
 #gameInfo { font-size: 16px; margin-bottom: 4px; }
 </style>
-<div id="gameInfo">Clicks: <span id="clickCount">0</span> | Time left: <span id="timeLeft">30</span>s</div>
+<div id="gameInfo">Clicks: <span id="clickCount">0</span> | Time left: <span id="timeLeft">15</span>s</div>
 <div id="targetGameBox">
   <div id="target"></div>
 </div>
@@ -147,9 +147,10 @@ def main():
 var box = document.getElementById('targetGameBox');
 var target = document.getElementById('target');
 var clickCount = 0;
-var timeLeft = 30;
+var timeLeft = 15;
 var timer = null;
 var gameActive = false;
+var timerStarted = false;
 function randomPos() {
     var x = Math.floor(Math.random() * (box.offsetWidth - target.offsetWidth));
     var y = Math.floor(Math.random() * (box.offsetHeight - target.offsetHeight));
@@ -158,28 +159,32 @@ function randomPos() {
 }
 function startGame() {
     clickCount = 0;
-    timeLeft = 30;
+    timeLeft = 15;
     gameActive = true;
+    timerStarted = false;
     document.getElementById('clickCount').innerText = clickCount;
     document.getElementById('timeLeft').innerText = timeLeft;
     target.style.display = 'block';
     randomPos();
-    timer = setInterval(function() {
-        timeLeft--;
-        document.getElementById('timeLeft').innerText = timeLeft;
-        if (timeLeft <= 0) endGame();
-    }, 1000);
 }
 target.onclick = function(e) {
     if (!gameActive) return;
     clickCount++;
     document.getElementById('clickCount').innerText = clickCount;
     randomPos();
+    if (!timerStarted) {
+        timerStarted = true;
+        timer = setInterval(function() {
+            timeLeft--;
+            document.getElementById('timeLeft').innerText = timeLeft;
+            if (timeLeft <= 0) endGame();
+        }, 1000);
+    }
 };
 function endGame() {
     gameActive = false;
     target.style.display = 'none';
-    clearInterval(timer);
+    if (timer) clearInterval(timer);
     var msg = 'Game over! You clicked ' + clickCount + ' times.';
     if (clickCount >= 15) {
         msg += ' Bonus unlocked!';
@@ -187,7 +192,7 @@ function endGame() {
     document.getElementById('gameResult').innerText = msg;
     // Communicate result to Streamlit
     var input = document.createElement('input');
-    input.type = 'hidden';
+    input.type = 'text';
     input.id = 'minigame_score';
     input.value = clickCount;
     document.body.appendChild(input);
@@ -198,7 +203,7 @@ setTimeout(startGame, 500);
 '''
             components.html(minigame_html, height=180)
             # Get mini-game score from hidden input (via st.text_input)
-            minigame_score = st.text_input("Mini-game score (auto-filled)", value="0", key="minigame_score", type="hidden")
+            minigame_score = st.text_input("Mini-game score (auto-filled)", value="0", key="minigame_score")
             try:
                 minigame_score_int = int(minigame_score)
             except:
