@@ -136,14 +136,14 @@ def main():
 <style>
 #targetGameBox { position: relative; width: 400px; height: 120px; background: #f4f4f4; border: 2px solid #333; margin-bottom: 8px;  background: #0f172a; border: 2px solid #334155; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.35); }
 #target { position: absolute; width: 36px; height: 36px; cursor: pointer; display: none; border-radius: 50%; background: radial-gradient(circle at center, #f8fafc 0 6px, #ef4444 6px 12px, #f8fafc 12px 18px, #3b82f6 18px 36px); box-shadow: 0 2px 6px rgba(0,0,0,.35);}
-#gameInfo { font-size: 16px; margin-bottom: 4px;  color: #e5e7eb; }
+#gameInfo { font-size: 16px; margin-bottom: 4px;  color: #e5e7eb;  color: #e5e7eb; }
 #target:active { transform: scale(.92);} </style>
 <div id="gameInfo">Clicks: <span id="clickCount">0</span> | Time left: <span id="timeLeft">15</span>s</div>
 <div id="targetGameBox">
   <div id="target"></div>
 </div>
 <div id="gameResult"></div>
-<div style="margin-top:6px;"><button id="startBtn">Start</button> <button id="restartBtn" style="display:none;">Play again</button></div>
+<div style="margin-top:6px;"><button id="startBtn">Start</button> </div>
 <input type="hidden" id="minigame_score_hidden" value="0" />
 <script>
 var box = document.getElementById('targetGameBox');
@@ -154,7 +154,6 @@ var timer = null;
 var gameActive = false;
 var timerStarted = false;
 var startBtn = document.getElementById('startBtn');
-var restartBtn = document.getElementById('restartBtn');
 function randomPos() {
     var x = Math.floor(Math.random() * (box.offsetWidth - target.offsetWidth));
     var y = Math.floor(Math.random() * (box.offsetHeight - target.offsetHeight));
@@ -170,8 +169,7 @@ function startGame() {
     document.getElementById('timeLeft').innerText = timeLeft;
     target.style.display = 'block';
     startBtn.style.display = 'none';
-    restartBtn.style.display = 'none';
-    randomPos();
+        randomPos();
     document.getElementById('minigame_score_hidden').value = 0;
 }
 target.onclick = function(e) {
@@ -197,11 +195,10 @@ function endGame() {
     document.getElementById('gameResult').innerText = msg;
     document.getElementById('minigame_score_hidden').value = clickCount;
     try { window.parent.postMessage({ type: 'MINIGAME_SCORE', value: String(clickCount) }, '*'); } catch(e) {}
-    restartBtn.style.display = 'inline-block';
-}
+    if (typeof startBtn !== 'undefined' && startBtn) { startBtn.disabled = true; startBtn.innerText = 'Completed'; }
+    }
 // Start button wiring
 startBtn.addEventListener('click', startGame);
-restartBtn.addEventListener('click', startGame);
 </script>
 '''
             components.html(minigame_html, height=200)
