@@ -134,15 +134,16 @@ def main():
             import streamlit.components.v1 as components
             minigame_html = '''
 <style>
-#targetGameBox { position: relative; width: 400px; height: 120px; background: #f4f4f4; border: 2px solid #333; margin-bottom: 8px; }
-#target { position: absolute; width: 32px; height: 32px; background: #3498db; border-radius: 50%; cursor: pointer; display: none; }
-#gameInfo { font-size: 16px; margin-bottom: 4px; }
-</style>
+#targetGameBox { position: relative; width: 400px; height: 120px; background: #f4f4f4; border: 2px solid #333; margin-bottom: 8px;  background: #0f172a; border: 2px solid #334155; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.35); }
+#target { position: absolute; width: 36px; height: 36px; cursor: pointer; display: none; border-radius: 50%; background: radial-gradient(circle at center, #f8fafc 0 6px, #ef4444 6px 12px, #f8fafc 12px 18px, #3b82f6 18px 36px); box-shadow: 0 2px 6px rgba(0,0,0,.35);}
+#gameInfo { font-size: 16px; margin-bottom: 4px;  color: #e5e7eb; }
+#target:active { transform: scale(.92);} </style>
 <div id="gameInfo">Clicks: <span id="clickCount">0</span> | Time left: <span id="timeLeft">15</span>s</div>
 <div id="targetGameBox">
   <div id="target"></div>
 </div>
 <div id="gameResult"></div>
+<div style="margin-top:6px;"><button id="startBtn">Start</button> <button id="restartBtn" style="display:none;">Play again</button></div>
 <input type="hidden" id="minigame_score_hidden" value="0" />
 <script>
 var box = document.getElementById('targetGameBox');
@@ -152,6 +153,8 @@ var timeLeft = 15;
 var timer = null;
 var gameActive = false;
 var timerStarted = false;
+var startBtn = document.getElementById('startBtn');
+var restartBtn = document.getElementById('restartBtn');
 function randomPos() {
     var x = Math.floor(Math.random() * (box.offsetWidth - target.offsetWidth));
     var y = Math.floor(Math.random() * (box.offsetHeight - target.offsetHeight));
@@ -166,6 +169,8 @@ function startGame() {
     document.getElementById('clickCount').innerText = clickCount;
     document.getElementById('timeLeft').innerText = timeLeft;
     target.style.display = 'block';
+    startBtn.style.display = 'none';
+    restartBtn.style.display = 'none';
     randomPos();
     document.getElementById('minigame_score_hidden').value = 0;
 }
@@ -188,14 +193,15 @@ function endGame() {
     target.style.display = 'none';
     if (timer) clearInterval(timer);
     var msg = 'Game over! You clicked ' + clickCount + ' times.';
-    if (clickCount >= 15) {
-        msg += ' Bonus unlocked!';
-    }
+    if (clickCount >= 15) { msg += ' Bonus unlocked!'; }
     document.getElementById('gameResult').innerText = msg;
     document.getElementById('minigame_score_hidden').value = clickCount;
+    try { window.parent.postMessage({ type: 'MINIGAME_SCORE', value: String(clickCount) }, '*'); } catch(e) {}
+    restartBtn.style.display = 'inline-block';
 }
-// Start game on load
-setTimeout(startGame, 500);
+// Start button wiring
+startBtn.addEventListener('click', startGame);
+restartBtn.addEventListener('click', startGame);
 </script>
 '''
             components.html(minigame_html, height=200)
@@ -214,6 +220,23 @@ window.addEventListener('DOMContentLoaded', function() {
 </script>
 """
             st.markdown(minigame_score_js, unsafe_allow_html=True)
+
+            st.markdown("""
+<script>
+(function() {
+  window.addEventListener('message', function(ev) {
+    if (!ev || !ev.data || ev.data.type !== 'MINIGAME_SCORE') return;
+    var score = ev.data.value || '0';
+    try {
+      var url = new URL(window.location.href);
+      url.searchParams.set('minigame_score', score);
+      window.history.replaceState({}, '', url);
+    } catch(e) {}
+  }, false);
+})();
+</script>
+""", unsafe_allow_html=True)
+
             # Use Streamlit's session state to update score
             if "minigame_score" not in st.session_state:
                 st.session_state["minigame_score"] = 0
@@ -230,7 +253,7 @@ window.addEventListener('DOMContentLoaded', function() {
         if submitted:
             # Try to get score from JS hidden input
             import streamlit.components.v1 as components
-            minigame_score = st.experimental_get_query_params().get("minigame_score_hidden", ["0"])[0]
+            minigame_score = st.query_params.get("minigame_score", "0")
             try:
                 minigame_score_int = int(minigame_score)
             except:
