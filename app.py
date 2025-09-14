@@ -205,7 +205,7 @@ target.onclick = function(e) {
 startBtn.addEventListener('click', startGame);
 </script>
 '''
-            components.html(minigame_html, height=200) if not st.session_state.get('minigame_lock', False) else st.caption('Mini-game already completed this session.')
+            _ = components.html(minigame_html, height=200) if not st.session_state.get('minigame_lock', False) else st.caption('Mini-game already completed this session.')
             # Read mini-game score from hidden input using JS injection
             minigame_score_int = st.session_state.get("minigame_score", 0)
             st.session_state.setdefault('minigame_lock', False)
