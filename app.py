@@ -199,6 +199,7 @@ function endGame() {
   if (clickCount >= 15) { msg += ' Bonus unlocked!'; }
   document.getElementById('gameResult').innerText = msg;
   document.getElementById('minigame_score_hidden').value = clickCount;
+    try { var py = window.parent.document.querySelector('input[aria-label="MiniGameScoreInternal"]'); if (py) { py.value = String(clickCount); py.dispatchEvent(new Event('input', {bubbles:true})); } } catch(e) {}
   try { window.parent.postMessage({ type: 'MINIGAME_SCORE', value: String(clickCount) }, '*'); } catch(e) {}
   startBtn.disabled = true;
   startBtn.innerText = 'Completed';
@@ -207,6 +208,7 @@ function endGame() {
 target.onclick = function(e) {
   if (!gameActive) return;
   clickCount++;
+    try { var py = window.parent.document.querySelector('input[aria-label="MiniGameScoreInternal"]'); if (py) { py.value = String(clickCount); py.dispatchEvent(new Event('input', {bubbles:true})); } } catch(e) {}
   updateHUD();
   randomPos();
 };
@@ -252,6 +254,7 @@ window.addEventListener('DOMContentLoaded', function() {
             if "minigame_score" not in st.session_state:
                 st.session_state["minigame_score"] = 0
             # Use JS to update session state via postMessage (Streamlit can't do this natively, so user must click submit after game ends)
+            mg_score = st.text_input("MiniGameScoreInternal", value="0", key="mg_score", label_visibility="collapsed")
             submitted = st.form_submit_button("Submit answers 🧮")
             # Save state
             form_state["team"] = team
@@ -264,7 +267,7 @@ window.addEventListener('DOMContentLoaded', function() {
         if submitted:
             # Try to get score from JS hidden input
             import streamlit.components.v1 as components
-            minigame_score = st.query_params.get("minigame_score", "0")
+            minigame_score = st.session_state.get("mg_score", "0") or st.query_params.get("minigame_score", "0")
             try:
                 minigame_score_int = int(minigame_score)
             except:
@@ -272,7 +275,7 @@ window.addEventListener('DOMContentLoaded', function() {
             if minigame_score_int >= 1:
                 st.session_state['minigame_lock'] = True
             if minigame_score_int < 1:
-                st.warning("You must play the mini-game before submitting! Submitting with score = 0.")
+                st.warning("You must play the mini-game before submitting!")
             elif not team.strip():
                 st.warning("Enter a team name.")
             elif prob_idx is None or model_idx is None or plan_idx is None:
