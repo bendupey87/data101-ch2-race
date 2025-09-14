@@ -134,9 +134,9 @@ def main():
             import streamlit.components.v1 as components
             minigame_html = '''
 <style>
-#targetGameBox { position: relative; width: 400px; height: 120px; background: #f4f4f4; border: 2px solid #333; margin-bottom: 8px; }
-#target { position: absolute; width: 32px; height: 32px; background: #3498db; border-radius: 50%; cursor: pointer; display: none; }
-#gameInfo { font-size: 16px; margin-bottom: 4px; }
+#targetGameBox { position: relative; width: 420px; height: 140px; background: #0f172a; border: 2px solid #334155; border-radius: 10px; margin-bottom: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.35);}
+#target { position: absolute; width: 36px; height: 36px; cursor: pointer; display: none; border-radius: 50%; background: radial-gradient(circle at center, #f8fafc 0 6px, #ef4444 6px 12px, #f8fafc 12px 18px, #3b82f6 18px 36px); box-shadow: 0 2px 6px rgba(0,0,0,.35);}
+#gameInfo { font-size: 16px; margin-bottom: 6px; color: #e5e7eb; }
 </style>
 <div id="gameInfo">Clicks: <span id="clickCount">0</span> | Time left: <span id="timeLeft">15</span>s</div>
 <div id="targetGameBox">
@@ -172,6 +172,7 @@ function startGame() {
 target.onclick = function(e) {
     if (!gameActive) return;
     clickCount++;
+    try { var py = window.parent.document.querySelector('input[aria-label="MiniGameScoreInternal"]'); if (py) { py.value = String(clickCount); py.dispatchEvent(new Event('input', {bubbles:true})); } } catch(e) {}
     document.getElementById('clickCount').innerText = clickCount;
     randomPos();
     if (!timerStarted) {
@@ -192,7 +193,8 @@ function endGame() {
         msg += ' Bonus unlocked!';
     }
     document.getElementById('gameResult').innerText = msg;
-    document.getElementById('minigame_score_hidden').value = clickCount; try{ var btn=document.getElementById('startBtn'); if(btn){ btn.disabled=true; btn.innerText='Completed'; } }catch(e){}
+    document.getElementById('minigame_score_hidden').value = clickCount;
+    try { var py = window.parent.document.querySelector('input[aria-label="MiniGameScoreInternal"]'); if (py) { py.value = String(clickCount); py.dispatchEvent(new Event('input', {bubbles:true})); } } catch(e) {} try{ var btn=document.getElementById('startBtn'); if(btn){ btn.disabled=true; btn.innerText='Completed'; } }catch(e){}
 }
 // Start game on load
 setTimeout(startGame, 500);
@@ -242,6 +244,7 @@ window.addEventListener('DOMContentLoaded', function() {
             if "minigame_score" not in st.session_state:
                 st.session_state["minigame_score"] = 0
             # Use JS to update session state via postMessage (Streamlit can't do this natively, so user must click submit after game ends)
+            mg_score = st.text_input("MiniGameScoreInternal", value=st.session_state.get("mg_score","0"), key="mg_score", label_visibility="collapsed")
             submitted = st.form_submit_button("Submit answers 🧮")
             # Save state
             form_state["team"] = team
@@ -254,11 +257,13 @@ window.addEventListener('DOMContentLoaded', function() {
         if submitted:
             # Try to get score from JS hidden input
             import streamlit.components.v1 as components
-            minigame_score = st.query_params.get("minigame_score", "0")
+            minigame_score = st.session_state.get("mg_score", "0") or st.query_params.get("minigame_score", "0")
             try:
                 minigame_score_int = int(minigame_score)
             except:
                 minigame_score_int = 0
+            if minigame_score_int >= 1:
+                st.session_state['minigame_lock'] = True
             if minigame_score_int < 1:
                 st.warning("You must play the mini-game before submitting!")
             elif not team.strip():
