@@ -134,16 +134,15 @@ def main():
             import streamlit.components.v1 as components
             minigame_html = '''
 <style>
-#targetGameBox { position: relative; width: 400px; height: 120px; background: #f4f4f4; border: 2px solid #333; margin-bottom: 8px;  background: #0f172a; border: 2px solid #334155; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.35); }
+#targetGameBox { position: relative; width: 400px; height: 120px; background: #0f172a; border: 2px solid #334155; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.35); margin-bottom: 8px; }
 #target { position: absolute; width: 36px; height: 36px; cursor: pointer; display: none; border-radius: 50%; background: radial-gradient(circle at center, #f8fafc 0 6px, #ef4444 6px 12px, #f8fafc 12px 18px, #3b82f6 18px 36px); box-shadow: 0 2px 6px rgba(0,0,0,.35);}
-#gameInfo { font-size: 16px; margin-bottom: 4px;  color: #e5e7eb;  color: #e5e7eb; }
-#target:active { transform: scale(.92);} </style>
+#gameInfo { font-size: 16px; margin-bottom: 4px;  color: #e5e7eb; }
+#target:active { transform: scale(.92);} 
+</style>
 <div id="gameInfo">Clicks: <span id="clickCount">0</span> | Time left: <span id="timeLeft">15</span>s</div>
-<div id="targetGameBox">
-  <div id="target"></div>
-</div>
+<div id="targetGameBox"><div id="target"></div></div>
 <div id="gameResult"></div>
-<div style="margin-top:6px;"><button id="startBtn">Start</button> </div>
+<div style="margin-top:6px;"><button id="startBtn">Start</button></div>
 <input type="hidden" id="minigame_score_hidden" value="0" />
 <script>
 var box = document.getElementById('targetGameBox');
@@ -152,58 +151,64 @@ var clickCount = 0;
 var timeLeft = 15;
 var timer = null;
 var gameActive = false;
-var timerStarted = false;
 var startBtn = document.getElementById('startBtn');
+
 function randomPos() {
-    var x = Math.floor(Math.random() * (box.offsetWidth - target.offsetWidth));
-    var y = Math.floor(Math.random() * (box.offsetHeight - target.offsetHeight));
-    target.style.left = x + 'px';
-    target.style.top = y + 'px';
+  var x = Math.floor(Math.random() * (box.offsetWidth - target.offsetWidth));
+  var y = Math.floor(Math.random() * (box.offsetHeight - target.offsetHeight));
+  target.style.left = x + 'px';
+  target.style.top = y + 'px';
 }
+
+function updateHUD() {
+  document.getElementById('clickCount').innerText = clickCount;
+  document.getElementById('timeLeft').innerText = timeLeft;
+}
+
 function startGame() {
-    clickCount = 0;
-    timeLeft = 15;
-    gameActive = true;
-    timerStarted = false;
-    document.getElementById('clickCount').innerText = clickCount;
-    document.getElementById('timeLeft').innerText = timeLeft;
-    target.style.display = 'block';
-    startBtn.style.display = 'none';
-        randomPos();
-    document.getElementById('minigame_score_hidden').value = 0;
+  if (gameActive || startBtn.disabled) return;
+  clickCount = 0;
+  timeLeft = 15;
+  updateHUD();
+  gameActive = true;
+  target.style.display = 'block';
+  startBtn.style.display = 'none';
+  randomPos();
+  document.getElementById('minigame_score_hidden').value = 0;
+  timer = setInterval(function() {
+    timeLeft--;
+    updateHUD();
+    if (timeLeft <= 0) endGame();
+  }, 1000);
 }
-target.onclick = function(e) {
-    if (!gameActive) return;
-    clickCount++;
-    document.getElementById('clickCount').innerText = clickCount;
-    randomPos();
-    if (!timerStarted) {
-        timerStarted = true;
-        timer = setInterval(function() {
-            timeLeft--;
-            document.getElementById('timeLeft').innerText = timeLeft;
-            if (timeLeft <= 0) endGame();
-        }, 1000);
-    }
-};
+
 function endGame() {
-    gameActive = false;
-    target.style.display = 'none';
-    if (timer) clearInterval(timer);
-    var msg = 'Game over! You clicked ' + clickCount + ' times.';
-    if (clickCount >= 15) { msg += ' Bonus unlocked!'; }
-    document.getElementById('gameResult').innerText = msg;
-    document.getElementById('minigame_score_hidden').value = clickCount;
-    try { window.parent.postMessage({ type: 'MINIGAME_SCORE', value: String(clickCount) }, '*'); } catch(e) {}
-    if (typeof startBtn !== 'undefined' && startBtn) { startBtn.disabled = true; startBtn.innerText = 'Completed'; }
-    }
-// Start button wiring
+  gameActive = false;
+  target.style.display = 'none';
+  if (timer) clearInterval(timer);
+  var msg = 'Game over! You clicked ' + clickCount + ' times.';
+  if (clickCount >= 15) { msg += ' Bonus unlocked!'; }
+  document.getElementById('gameResult').innerText = msg;
+  document.getElementById('minigame_score_hidden').value = clickCount;
+  try { window.parent.postMessage({ type: 'MINIGAME_SCORE', value: String(clickCount) }, '*'); } catch(e) {}
+  startBtn.disabled = true;
+  startBtn.innerText = 'Completed';
+}
+
+target.onclick = function(e) {
+  if (!gameActive) return;
+  clickCount++;
+  updateHUD();
+  randomPos();
+};
+
 startBtn.addEventListener('click', startGame);
 </script>
 '''
-            components.html(minigame_html, height=200)
+            components.html(minigame_html, height=200) if not st.session_state.get('minigame_lock', False) else st.caption('Mini-game already completed this session.')
             # Read mini-game score from hidden input using JS injection
             minigame_score_int = st.session_state.get("minigame_score", 0)
+            st.session_state.setdefault('minigame_lock', False)
             minigame_score_js = """
 <script>
 window.addEventListener('DOMContentLoaded', function() {
@@ -255,9 +260,11 @@ window.addEventListener('DOMContentLoaded', function() {
                 minigame_score_int = int(minigame_score)
             except:
                 minigame_score_int = 0
+            if minigame_score_int >= 1:
+                st.session_state['minigame_lock'] = True
             if minigame_score_int < 1:
-                st.warning("You must play the mini-game before submitting!")
-            elif not team.strip():
+                st.warning("You must play the mini-game before submitting! Submitting with score = 0.")
+            if not team.strip():
                 st.warning("Enter a team name.")
             elif prob_idx is None or model_idx is None or plan_idx is None:
                 st.warning("Answer all required questions (1, 3, and 5).")
