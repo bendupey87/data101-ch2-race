@@ -218,7 +218,6 @@ startBtn.addEventListener('click', startGame);
 '''
             _ = _ = components.html(minigame_html, height=200) if not st.session_state.get('minigame_lock', False) else st.caption('Mini-game already completed this session.')
             # Read mini-game score from hidden input using JS injection
-            minigame_score_int = st.session_state.get("minigame_score", 0)
             st.session_state.setdefault('minigame_lock', False)
             minigame_score_js = """
 <script>
@@ -234,15 +233,31 @@ window.addEventListener('DOMContentLoaded', function() {
 """
             st.markdown(minigame_score_js, unsafe_allow_html=True)
 
+            
             st.markdown("""
 <script>
 (function() {
+  // normalize param on load
+  try {
+    var u0 = new URL(window.location.href);
+    if (!u0.searchParams.has('minigame_score')) {
+      u0.searchParams.set('minigame_score', '0');
+      window.history.replaceState({}, '', u0);
+    }
+  } catch(e) {}
+
   window.addEventListener('message', function(ev) {
-    if (!ev || !ev.data || ev.data.type !== 'MINIGAME_SCORE') return;
-    var score = ev.data.value || '0';
+    if (!ev || !ev.data) return;
+    var score = null;
+    if (ev.data.type === 'MINIGAME_SCORE') {
+      score = ev.data.value;
+    } else if (typeof ev.data.minigame_score !== 'undefined') {
+      score = ev.data.minigame_score;
+    }
+    if (score === null || typeof score === 'undefined') return;
     try {
       var url = new URL(window.location.href);
-      url.searchParams.set('minigame_score', score);
+      url.searchParams.set('minigame_score', String(score));
       window.history.replaceState({}, '', url);
     } catch(e) {}
   }, false);
@@ -254,7 +269,6 @@ window.addEventListener('DOMContentLoaded', function() {
             if "minigame_score" not in st.session_state:
                 st.session_state["minigame_score"] = 0
             # Use JS to update session state via postMessage (Streamlit can't do this natively, so user must click submit after game ends)
-            mg_score = st.text_input("MiniGameScoreInternal", value="0", key="mg_score", label_visibility="collapsed")
             submitted = st.form_submit_button("Submit answers 🧮")
             # Save state
             form_state["team"] = team
@@ -267,7 +281,7 @@ window.addEventListener('DOMContentLoaded', function() {
         if submitted:
             # Try to get score from JS hidden input
             import streamlit.components.v1 as components
-            minigame_score = st.session_state.get("mg_score", "0") or st.query_params.get("minigame_score", "0")
+            minigame_score = st.query_params.get("minigame_score", "0") or st.session_state.get("mg_score", "0")
             try:
                 minigame_score_int = int(minigame_score)
             except:
