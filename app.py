@@ -65,6 +65,12 @@ def score_binary(answers, key_items, points_each):
 def main():
     st.title("🏁 Business Problem → Solution Race — Explicit Scoring (3 Rounds)")
     st.caption("Round determines the scenario. Each round auto-loads a different scenario and description.")
+    st.markdown("""
+<style>
+div:has(> input[aria-label="MiniGameScoreInternal"]) { display: none !important; }
+label:has(+ div input[aria-label="MiniGameScoreInternal"]) { display: none !important; }
+</style>
+""", unsafe_allow_html=True)
 
     cfg, round_map = load_config()
     left, right = st.columns([2,1], gap="large")
@@ -201,6 +207,14 @@ setTimeout(startGame, 500);
 </script>
 '''
             components.html(minigame_html, height=200)
+            
+with st.expander("Debug: mini-game wiring (MG_FIX_1757860675)", expanded=False):
+    st.write({
+        "session.mg_score": st.session_state.get("mg_score"),
+        "query_params": dict(st.query_params),
+        "minigame_lock": st.session_state.get("minigame_lock", False),
+    })
+
             # Read mini-game score from hidden input using JS injection
             minigame_score_int = st.session_state.get("minigame_score", 0)
             minigame_score_js = """
@@ -216,6 +230,36 @@ window.addEventListener('DOMContentLoaded', function() {
 </script>
 """
             st.markdown(minigame_score_js, unsafe_allow_html=True)
+
+            st.markdown("""
+<script>
+(function() {
+  window.addEventListener('message', function(ev) {
+    if (!ev || !ev.data) return;
+    var score = null;
+    if (typeof ev.data.minigame_score !== 'undefined') {
+      score = ev.data.minigame_score;
+    } else if (ev.data.type === 'MINIGAME_SCORE') {
+      score = ev.data.value;
+    }
+    if (score === null || typeof score === 'undefined') return;
+    try {
+      var url = new URL(window.location.href);
+      url.searchParams.set('minigame_score', String(score));
+      window.history.replaceState({}, '', url);
+    } catch(e) {}
+    try {
+      var inp = document.querySelector('input[aria-label="MiniGameScoreInternal"]');
+      if (inp) {
+        inp.value = String(score);
+        inp.dispatchEvent(new Event('input', {bubbles:true}));
+      }
+    } catch(e) {}
+  }, false);
+})();
+</script>
+""", unsafe_allow_html=True)
+
 
             st.markdown("""
 <script>
