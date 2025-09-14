@@ -65,6 +65,15 @@ def score_binary(answers, key_items, points_each):
 def main():
     st.title("🏁 Business Problem → Solution Race — Explicit Scoring (3 Rounds)")
     st.caption("Round determines the scenario. Each round auto-loads a different scenario and description.")
+    st.markdown("""
+<style>
+.feedback { padding: 8px 10px; border-radius: 6px; margin: 6px 0 12px; line-height: 1.4; }
+.feedback.error { background: #3f1d1d; color: #fecaca; border: 1px solid #b91c1c; }
+.feedback.correct { background: #052e16; color: #a7f3d0; border: 1px solid #065f46; }
+.feedback.info { background: #1e293b; color: #e2e8f0; border: 1px dashed #475569; }
+.feedback b { color: #ffffff; }
+</style>
+""", unsafe_allow_html=True)
 
     cfg, round_map = load_config()
     left, right = st.columns([2,1], gap="large")
@@ -205,7 +214,7 @@ target.onclick = function(e) {
 startBtn.addEventListener('click', startGame);
 </script>
 '''
-            _ = components.html(minigame_html, height=200) if not st.session_state.get('minigame_lock', False) else st.caption('Mini-game already completed this session.')
+            _ = _ = components.html(minigame_html, height=200) if not st.session_state.get('minigame_lock', False) else st.caption('Mini-game already completed this session.')
             # Read mini-game score from hidden input using JS injection
             minigame_score_int = st.session_state.get("minigame_score", 0)
             st.session_state.setdefault('minigame_lock', False)
@@ -264,7 +273,7 @@ window.addEventListener('DOMContentLoaded', function() {
                 st.session_state['minigame_lock'] = True
             if minigame_score_int < 1:
                 st.warning("You must play the mini-game before submitting! Submitting with score = 0.")
-            if not team.strip():
+            elif not team.strip():
                 st.warning("Enter a team name.")
             elif prob_idx is None or model_idx is None or plan_idx is None:
                 st.warning("Answer all required questions (1, 3, and 5).")
@@ -312,7 +321,7 @@ window.addEventListener('DOMContentLoaded', function() {
                     st.markdown(f"<span style='color:green'><b>Business problem: Correct!</b></span>", unsafe_allow_html=True)
                 else:
                     st.markdown(f"<span style='color:red'><b>Business problem: Incorrect.</b></span>", unsafe_allow_html=True)
-                    st.markdown(f"<span style='background-color:#ffe6e6'><b>Correct answer:</b> {block['problem_single']['options'][correct_idx]}</span>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='feedback error'><b>Correct answer:</b> {block['problem_single']['options'][correct_idx]}</div>", unsafe_allow_html=True)
                 # 2) Business goals
                 correct_goals = set(block["goals_multi"]["answer_indices"])
                 chosen_goals = set(goal_choices)
@@ -321,14 +330,14 @@ window.addEventListener('DOMContentLoaded', function() {
                 else:
                     st.markdown(f"<span style='color:red'><b>Business goals: Incorrect.</b></span>", unsafe_allow_html=True)
                     correct_labels = [block['goals_multi']['options'][i] for i in correct_goals]
-                    st.markdown(f"<span style='background-color:#ffe6e6'><b>Correct answers:</b> {', '.join(correct_labels)}</span>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='feedback error'><b>Correct answers:</b> {', '.join(correct_labels)}</div>", unsafe_allow_html=True)
                 # 3) Analytics solution/model
                 correct_idx = block["model_single"]["answer_index"]
                 if s3:
                     st.markdown(f"<span style='color:green'><b>Analytics solution/model: Correct!</b></span>", unsafe_allow_html=True)
                 else:
                     st.markdown(f"<span style='color:red'><b>Analytics solution/model: Incorrect.</b></span>", unsafe_allow_html=True)
-                    st.markdown(f"<span style='background-color:#ffe6e6'><b>Correct answer:</b> {block['model_single']['options'][correct_idx]}</span>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='feedback error'><b>Correct answer:</b> {block['model_single']['options'][correct_idx]}</div>", unsafe_allow_html=True)
                 # 4) Feasibility
                 feas_correct = len(feas_items)*block['feasibility_binary']['points_each']
                 if s4 == feas_correct:
@@ -336,14 +345,14 @@ window.addEventListener('DOMContentLoaded', function() {
                 else:
                     st.markdown(f"<span style='color:red'><b>Feasibility: Incorrect.</b></span>", unsafe_allow_html=True)
                     correct_labels = [f"{item['text']} — {item['answer']}" for item in feas_items]
-                    st.markdown(f"<span style='background-color:#ffe6e6'><b>Correct answers:</b> {'; '.join(correct_labels)}</span>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='feedback error'><b>Correct answers:</b> {'; '.join(correct_labels)}</div>", unsafe_allow_html=True)
                 # 5) Analytics plan
                 correct_idx = block["plan_single"]["answer_index"]
                 if s5:
                     st.markdown(f"<span style='color:green'><b>Analytics plan: Correct!</b></span>", unsafe_allow_html=True)
                 else:
                     st.markdown(f"<span style='color:red'><b>Analytics plan: Incorrect.</b></span>", unsafe_allow_html=True)
-                    st.markdown(f"<span style='background-color:#ffe6e6'><b>Correct answer:</b> {block['plan_single']['options'][correct_idx]}</span>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='feedback error'><b>Correct answer:</b> {block['plan_single']['options'][correct_idx]}</div>", unsafe_allow_html=True)
                 # Reset form state and mini-game
                 st.session_state["form_state"] = {
                     "team": "",
