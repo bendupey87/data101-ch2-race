@@ -65,15 +65,6 @@ def score_binary(answers, key_items, points_each):
 def main():
     st.title("🏁 Business Problem → Solution Race — Explicit Scoring (3 Rounds)")
     st.caption("Round determines the scenario. Each round auto-loads a different scenario and description.")
-    st.markdown("""
-<style>
-.feedback { padding: 8px 10px; border-radius: 6px; margin: 6px 0 12px; line-height: 1.4; }
-.feedback.error { background: #3f1d1d; color: #fecaca; border: 1px solid #b91c1c; }
-.feedback.correct { background: #052e16; color: #a7f3d0; border: 1px solid #065f46; }
-.feedback.info { background: #1e293b; color: #e2e8f0; border: 1px dashed #475569; }
-.feedback b { color: #ffffff; }
-</style>
-""", unsafe_allow_html=True)
 
     cfg, round_map = load_config()
     left, right = st.columns([2,1], gap="large")
@@ -143,15 +134,15 @@ def main():
             import streamlit.components.v1 as components
             minigame_html = '''
 <style>
-#targetGameBox { position: relative; width: 400px; height: 120px; background: #0f172a; border: 2px solid #334155; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.35); margin-bottom: 8px; }
-#target { position: absolute; width: 36px; height: 36px; cursor: pointer; display: none; border-radius: 50%; background: radial-gradient(circle at center, #f8fafc 0 6px, #ef4444 6px 12px, #f8fafc 12px 18px, #3b82f6 18px 36px); box-shadow: 0 2px 6px rgba(0,0,0,.35);}
-#gameInfo { font-size: 16px; margin-bottom: 4px;  color: #e5e7eb; }
-#target:active { transform: scale(.92);} 
+#targetGameBox { position: relative; width: 400px; height: 120px; background: #f4f4f4; border: 2px solid #333; margin-bottom: 8px; }
+#target { position: absolute; width: 32px; height: 32px; background: #3498db; border-radius: 50%; cursor: pointer; display: none; }
+#gameInfo { font-size: 16px; margin-bottom: 4px; }
 </style>
 <div id="gameInfo">Clicks: <span id="clickCount">0</span> | Time left: <span id="timeLeft">15</span>s</div>
-<div id="targetGameBox"><div id="target"></div></div>
+<div id="targetGameBox">
+  <div id="target"></div>
+</div>
 <div id="gameResult"></div>
-<div style="margin-top:6px;"><button id="startBtn">Start</button></div>
 <input type="hidden" id="minigame_score_hidden" value="0" />
 <script>
 var box = document.getElementById('targetGameBox');
@@ -160,65 +151,56 @@ var clickCount = 0;
 var timeLeft = 15;
 var timer = null;
 var gameActive = false;
-var startBtn = document.getElementById('startBtn');
-
+var timerStarted = false;
 function randomPos() {
-  var x = Math.floor(Math.random() * (box.offsetWidth - target.offsetWidth));
-  var y = Math.floor(Math.random() * (box.offsetHeight - target.offsetHeight));
-  target.style.left = x + 'px';
-  target.style.top = y + 'px';
+    var x = Math.floor(Math.random() * (box.offsetWidth - target.offsetWidth));
+    var y = Math.floor(Math.random() * (box.offsetHeight - target.offsetHeight));
+    target.style.left = x + 'px';
+    target.style.top = y + 'px';
 }
-
-function updateHUD() {
-  document.getElementById('clickCount').innerText = clickCount;
-  document.getElementById('timeLeft').innerText = timeLeft;
-}
-
 function startGame() {
-  if (gameActive || startBtn.disabled) return;
-  clickCount = 0;
-  timeLeft = 15;
-  updateHUD();
-  gameActive = true;
-  target.style.display = 'block';
-  startBtn.style.display = 'none';
-  randomPos();
-  document.getElementById('minigame_score_hidden').value = 0;
-  timer = setInterval(function() {
-    timeLeft--;
-    updateHUD();
-    if (timeLeft <= 0) endGame();
-  }, 1000);
+    clickCount = 0;
+    timeLeft = 15;
+    gameActive = true;
+    timerStarted = false;
+    document.getElementById('clickCount').innerText = clickCount;
+    document.getElementById('timeLeft').innerText = timeLeft;
+    target.style.display = 'block';
+    randomPos();
+    document.getElementById('minigame_score_hidden').value = 0;
 }
-
-function endGame() {
-  gameActive = false;
-  target.style.display = 'none';
-  if (timer) clearInterval(timer);
-  var msg = 'Game over! You clicked ' + clickCount + ' times.';
-  if (clickCount >= 15) { msg += ' Bonus unlocked!'; }
-  document.getElementById('gameResult').innerText = msg;
-  document.getElementById('minigame_score_hidden').value = clickCount;
-    try { var py = window.parent.document.querySelector('input[aria-label="MiniGameScoreInternal"]'); if (py) { py.value = String(clickCount); py.dispatchEvent(new Event('input', {bubbles:true})); } } catch(e) {}
-  try { window.parent.postMessage({ type: 'MINIGAME_SCORE', value: String(clickCount) }, '*'); } catch(e) {}
-  startBtn.disabled = true;
-  startBtn.innerText = 'Completed';
-}
-
 target.onclick = function(e) {
-  if (!gameActive) return;
-  clickCount++;
-    try { var py = window.parent.document.querySelector('input[aria-label="MiniGameScoreInternal"]'); if (py) { py.value = String(clickCount); py.dispatchEvent(new Event('input', {bubbles:true})); } } catch(e) {}
-  updateHUD();
-  randomPos();
+    if (!gameActive) return;
+    clickCount++;
+    document.getElementById('clickCount').innerText = clickCount;
+    randomPos();
+    if (!timerStarted) {
+        timerStarted = true;
+        timer = setInterval(function() {
+            timeLeft--;
+            document.getElementById('timeLeft').innerText = timeLeft;
+            if (timeLeft <= 0) endGame();
+        }, 1000);
+    }
 };
-
-startBtn.addEventListener('click', startGame);
+function endGame() {
+    gameActive = false;
+    target.style.display = 'none';
+    if (timer) clearInterval(timer);
+    var msg = 'Game over! You clicked ' + clickCount + ' times.';
+    if (clickCount >= 15) {
+        msg += ' Bonus unlocked!';
+    }
+    document.getElementById('gameResult').innerText = msg;
+    document.getElementById('minigame_score_hidden').value = clickCount; try{ var btn=document.getElementById('startBtn'); if(btn){ btn.disabled=true; btn.innerText='Completed'; } }catch(e){}
+}
+// Start game on load
+setTimeout(startGame, 500);
 </script>
 '''
-            _ = _ = components.html(minigame_html, height=200) if not st.session_state.get('minigame_lock', False) else st.caption('Mini-game already completed this session.')
+            components.html(minigame_html, height=200)
             # Read mini-game score from hidden input using JS injection
-            st.session_state.setdefault('minigame_lock', False)
+            minigame_score_int = st.session_state.get("minigame_score", 0)
             minigame_score_js = """
 <script>
 window.addEventListener('DOMContentLoaded', function() {
@@ -233,26 +215,17 @@ window.addEventListener('DOMContentLoaded', function() {
 """
             st.markdown(minigame_score_js, unsafe_allow_html=True)
 
-            
             st.markdown("""
 <script>
 (function() {
-  // normalize param on load
-  try {
-    var u0 = new URL(window.location.href);
-    if (!u0.searchParams.has('minigame_score')) {
-      u0.searchParams.set('minigame_score', '0');
-      window.history.replaceState({}, '', u0);
-    }
-  } catch(e) {}
-
+  // Update URL param when we receive periodic score updates or final message
   window.addEventListener('message', function(ev) {
     if (!ev || !ev.data) return;
     var score = null;
-    if (ev.data.type === 'MINIGAME_SCORE') {
-      score = ev.data.value;
-    } else if (typeof ev.data.minigame_score !== 'undefined') {
+    if (typeof ev.data.minigame_score !== 'undefined') {
       score = ev.data.minigame_score;
+    } else if (ev.data.type === 'MINIGAME_SCORE') {
+      score = ev.data.value;
     }
     if (score === null || typeof score === 'undefined') return;
     try {
@@ -281,13 +254,11 @@ window.addEventListener('DOMContentLoaded', function() {
         if submitted:
             # Try to get score from JS hidden input
             import streamlit.components.v1 as components
-            minigame_score = st.query_params.get("minigame_score", "0") or st.session_state.get("mg_score", "0")
+            minigame_score = st.query_params.get("minigame_score", "0")
             try:
                 minigame_score_int = int(minigame_score)
             except:
                 minigame_score_int = 0
-            if minigame_score_int >= 1:
-                st.session_state['minigame_lock'] = True
             if minigame_score_int < 1:
                 st.warning("You must play the mini-game before submitting!")
             elif not team.strip():
@@ -338,7 +309,7 @@ window.addEventListener('DOMContentLoaded', function() {
                     st.markdown(f"<span style='color:green'><b>Business problem: Correct!</b></span>", unsafe_allow_html=True)
                 else:
                     st.markdown(f"<span style='color:red'><b>Business problem: Incorrect.</b></span>", unsafe_allow_html=True)
-                    st.markdown(f"<div class='feedback error'><b>Correct answer:</b> {block['problem_single']['options'][correct_idx]}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<span style='background-color:#ffe6e6'><b>Correct answer:</b> {block['problem_single']['options'][correct_idx]}</span>", unsafe_allow_html=True)
                 # 2) Business goals
                 correct_goals = set(block["goals_multi"]["answer_indices"])
                 chosen_goals = set(goal_choices)
@@ -347,14 +318,14 @@ window.addEventListener('DOMContentLoaded', function() {
                 else:
                     st.markdown(f"<span style='color:red'><b>Business goals: Incorrect.</b></span>", unsafe_allow_html=True)
                     correct_labels = [block['goals_multi']['options'][i] for i in correct_goals]
-                    st.markdown(f"<div class='feedback error'><b>Correct answers:</b> {', '.join(correct_labels)}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<span style='background-color:#ffe6e6'><b>Correct answers:</b> {', '.join(correct_labels)}</span>", unsafe_allow_html=True)
                 # 3) Analytics solution/model
                 correct_idx = block["model_single"]["answer_index"]
                 if s3:
                     st.markdown(f"<span style='color:green'><b>Analytics solution/model: Correct!</b></span>", unsafe_allow_html=True)
                 else:
                     st.markdown(f"<span style='color:red'><b>Analytics solution/model: Incorrect.</b></span>", unsafe_allow_html=True)
-                    st.markdown(f"<div class='feedback error'><b>Correct answer:</b> {block['model_single']['options'][correct_idx]}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<span style='background-color:#ffe6e6'><b>Correct answer:</b> {block['model_single']['options'][correct_idx]}</span>", unsafe_allow_html=True)
                 # 4) Feasibility
                 feas_correct = len(feas_items)*block['feasibility_binary']['points_each']
                 if s4 == feas_correct:
@@ -362,14 +333,14 @@ window.addEventListener('DOMContentLoaded', function() {
                 else:
                     st.markdown(f"<span style='color:red'><b>Feasibility: Incorrect.</b></span>", unsafe_allow_html=True)
                     correct_labels = [f"{item['text']} — {item['answer']}" for item in feas_items]
-                    st.markdown(f"<div class='feedback error'><b>Correct answers:</b> {'; '.join(correct_labels)}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<span style='background-color:#ffe6e6'><b>Correct answers:</b> {'; '.join(correct_labels)}</span>", unsafe_allow_html=True)
                 # 5) Analytics plan
                 correct_idx = block["plan_single"]["answer_index"]
                 if s5:
                     st.markdown(f"<span style='color:green'><b>Analytics plan: Correct!</b></span>", unsafe_allow_html=True)
                 else:
                     st.markdown(f"<span style='color:red'><b>Analytics plan: Incorrect.</b></span>", unsafe_allow_html=True)
-                    st.markdown(f"<div class='feedback error'><b>Correct answer:</b> {block['plan_single']['options'][correct_idx]}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<span style='background-color:#ffe6e6'><b>Correct answer:</b> {block['plan_single']['options'][correct_idx]}</span>", unsafe_allow_html=True)
                 # Reset form state and mini-game
                 st.session_state["form_state"] = {
                     "team": "",
