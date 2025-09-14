@@ -215,8 +215,7 @@ window.addEventListener('DOMContentLoaded', function() {
 """
             st.markdown(minigame_score_js, unsafe_allow_html=True)
             # Use Streamlit's session state to update score
-            import streamlit as st
-            if "minigame_score" not in st.session_state:
+                        if "minigame_score" not in st.session_state:
                 st.session_state["minigame_score"] = 0
             # Use JS to update session state via postMessage (Streamlit can't do this natively, so user must click submit after game ends)
             submitted = st.form_submit_button("Submit answers 🧮")
